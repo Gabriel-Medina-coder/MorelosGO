@@ -2,32 +2,39 @@ package mx.edu.utez.morelosgo.Screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import mx.edu.utez.volley4c.ui.components.SpinnerDropdown
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun MainView(){
+fun MainView(navController: NavController){
+    var searchQuery by remember { mutableStateOf("") }
 
-    Column {
+    Column(
+        modifier = Modifier.padding(16.dp)
+    ) {
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = {
-                Row {
-                    Text(text = "Buscar sitios")
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search"
-                    )
-                }
-            }
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text(text = "Buscar sitios") },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = "Search"
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         //Colocar SpinnerDropDown
@@ -38,5 +45,6 @@ fun MainView(){
 @Composable
 @Preview(showBackground = true)
 fun MainViewPreview(){
-    MainView()
+    val navController = rememberNavController()
+    MainView(navController)
 }

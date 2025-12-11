@@ -40,6 +40,7 @@ android {
 }
 
 dependencies {
+    implementation("com.android.volley:volley:1.2.1")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
