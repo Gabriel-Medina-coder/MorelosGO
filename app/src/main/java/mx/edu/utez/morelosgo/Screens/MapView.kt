@@ -22,52 +22,21 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import mx.edu.utez.morelosgo.data.network.model.Favorito
-import mx.edu.utez.morelosgo.data.network.model.Sitio
-import mx.edu.utez.morelosgo.data.network.repository.FavoritoRepository
-import mx.edu.utez.morelosgo.data.network.repository.SitioRepository
-import mx.edu.utez.morelosgo.utils.SessionManager
+import mx.edu.utez.morelosgo.viewmodel.MapViewModel
 
 @Composable
 fun MapView(navController: NavController) {
     val context = LocalContext.current
-    val sitioRepository = remember { SitioRepository(context) }
-    val favoritoRepository = remember { FavoritoRepository(context) }
+    val viewModel = remember { MapViewModel(context) }
     
-    var selectedFilter by remember { mutableStateOf("General") }
+    // Collect states from ViewModel
+    val sitios by viewModel.sitios.collectAsState()
+    val favoritos by viewModel.favoritos.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val selectedFilter by viewModel.selectedFilter.collectAsState()
+    val selectedSitio by viewModel.selectedSitio.collectAsState()
+    
     var permitido by remember { mutableStateOf(false) }
-    var sitios by remember { mutableStateOf<List<Sitio>>(emptyList()) }
-    var favoritos by remember { mutableStateOf<List<Favorito>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var selectedSitio by remember { mutableStateOf<Sitio?>(null) }
-    
-    // Cargar sitios
-    LaunchedEffect(Unit) {
-        isLoading = true
-        sitioRepository.getAll(
-            onSuccess = { listaSitios ->
-                sitios = listaSitios
-                isLoading = false
-            },
-            onError = {
-                isLoading = false
-            }
-        )
-    }
-    
-    // Cargar favoritos del usuario actual
-    LaunchedEffect(Unit) {
-        val currentUserId = SessionManager.getUserId(context)
-        if (currentUserId != 0) {
-            favoritoRepository.getAll(
-                onSuccess = { listaFavoritos ->
-                    // Filtrar solo favoritos del usuario actual
-                    favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                },
-                onError = { }
-            )
-        }
-    }
     
     // Permisos de ubicación
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -95,85 +64,9 @@ fun MapView(navController: NavController) {
         position = CameraPosition.fromLatLngZoom(morelasCenter, 10f)
     }
     
-    // Filtrar sitios según filtro
+    // Get filtered sitios from ViewModel
     val filteredSitios = remember(selectedFilter, sitios, favoritos) {
-        when (selectedFilter) {
-            "Favoritos" -> {
-                val favoritoIds = favoritos.map { it.idSitio }.toSet()
-                sitios.filter { it.idSitio in favoritoIds }
-            }
-            else -> sitios // "General" muestra todos
-        }
-    }
-    
-    // Función para verificar si un sitio es favorito
-    fun isFavorite(idSitio: Int): Boolean {
-        return favoritos.any { it.idSitio == idSitio }
-    }
-    
-    // Función para agregar/quitar favorito
-    fun toggleFavorite(sitio: Sitio) {
-        val esFavorito = isFavorite(sitio.idSitio)
-        val currentUserId = SessionManager.getUserId(context)
-        
-        // Debug logging
-        android.util.Log.d("MapView", "toggleFavorite - Sitio: ${sitio.nombre}, ID: ${sitio.idSitio}, esFavorito: $esFavorito")
-        
-        if (currentUserId == 0) {
-            // No hay usuario logueado
-            android.util.Log.d("MapView", "toggleFavorite - No hay usuario logueado")
-            return
-        }
-        
-        if (esFavorito) {
-            // Remover favorito
-            val favorito = favoritos.find { it.idSitio == sitio.idSitio }
-            android.util.Log.d("MapView", "Removiendo favorito - idFavorito: ${favorito?.idFavorito}, idSitio: ${favorito?.idSitio}")
-            favorito?.let {
-                favoritoRepository.delete(
-                    idFavorito = it.idFavorito,
-                    onSuccess = {
-                        android.util.Log.d("MapView", "Favorito eliminado exitosamente")
-                        // Recargar favoritos del usuario actual
-                        favoritoRepository.getAll(
-                            onSuccess = { listaFavoritos ->
-                                favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                                android.util.Log.d("MapView", "Favoritos después de eliminar: ${favoritos.map { it.idSitio }}")
-                            },
-                            onError = { }
-                        )
-                    },
-                    onError = { error ->
-                        android.util.Log.e("MapView", "Error al eliminar favorito: $error")
-                    }
-                )
-            }
-        } else {
-            // Agregar favorito con ID del usuario actual
-            val nuevoFavorito = Favorito(
-                idFavorito = 0, // Se genera en el servidor
-                idUsuario = currentUserId,
-                idSitio = sitio.idSitio
-            )
-            android.util.Log.d("MapView", "Agregando favorito - Usuario: $currentUserId, Sitio: ${sitio.idSitio} (${sitio.nombre})")
-            favoritoRepository.create(
-                favorito = nuevoFavorito,
-                onSuccess = {
-                    android.util.Log.d("MapView", "Favorito agregado exitosamente")
-                    // Recargar favoritos del usuario actual
-                    favoritoRepository.getAll(
-                        onSuccess = { listaFavoritos ->
-                            favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                            android.util.Log.d("MapView", "Favoritos después de agregar: ${favoritos.map { it.idSitio }}")
-                        },
-                        onError = { }
-                    )
-                },
-                onError = { error ->
-                    android.util.Log.e("MapView", "Error al agregar favorito: $error")
-                }
-            )
-        }
+        viewModel.getFilteredSitios()
     }
     
     // Función para obtener color del marcador según tipo
@@ -203,12 +96,12 @@ fun MapView(navController: NavController) {
             FilterButton(
                 text = "General",
                 isSelected = selectedFilter == "General",
-                onClick = { selectedFilter = "General" }
+                onClick = { viewModel.setFilter("General") }
             )
             FilterButton(
                 text = "Favoritos",
                 isSelected = selectedFilter == "Favoritos",
-                onClick = { selectedFilter = "Favoritos" }
+                onClick = { viewModel.setFilter("Favoritos") }
             )
         }
         
@@ -244,7 +137,7 @@ fun MapView(navController: NavController) {
                         snippet = sitio.tipo,
                         icon = BitmapDescriptorFactory.defaultMarker(markerColor),
                         onClick = {
-                            selectedSitio = sitio
+                            viewModel.selectSitio(sitio)
                             true
                         }
                     )
@@ -255,7 +148,7 @@ fun MapView(navController: NavController) {
         // Diálogo para mostrar detalles del sitio seleccionado
         selectedSitio?.let { sitio ->
             AlertDialog(
-                onDismissRequest = { selectedSitio = null },
+                onDismissRequest = { viewModel.dismissDialog() },
                 title = {
                     Text(
                         text = sitio.nombre,
@@ -281,7 +174,7 @@ fun MapView(navController: NavController) {
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { selectedSitio = null }) {
+                    TextButton(onClick = { viewModel.dismissDialog() }) {
                         Text("Cerrar")
                     }
                 }

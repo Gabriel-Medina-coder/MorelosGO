@@ -17,30 +17,16 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import mx.edu.utez.morelosgo.R
-import mx.edu.utez.morelosgo.data.network.model.Favorito
-import mx.edu.utez.morelosgo.data.network.repository.FavoritoRepository
-import mx.edu.utez.morelosgo.utils.SessionManager
+import mx.edu.utez.morelosgo.viewmodel.PerfilViewModel
 
 @Composable
 fun PerfilScreen(navController: NavController){
     val context = LocalContext.current
-    val favoritoRepository = remember { FavoritoRepository(context) }
+    val viewModel = remember { PerfilViewModel(context) }
     
-    // Obtener usuario actual de la sesión
-    val currentUser = remember { SessionManager.getCurrentUser(context) }
-    var favoritosCount by remember { mutableStateOf(0) }
-    
-    // Cargar cantidad de favoritos
-    LaunchedEffect(currentUser) {
-        currentUser?.let { user ->
-            favoritoRepository.getAll(
-                onSuccess = { favoritos ->
-                    favoritosCount = favoritos.count { it.idUsuario == user.idUsuario }
-                },
-                onError = { }
-            )
-        }
-    }
+    // Collect states from ViewModel
+    val currentUser by viewModel.currentUser.collectAsState()
+    val favoritosCount by viewModel.favoritosCount.collectAsState()
     
     Column(
         modifier = Modifier
@@ -144,10 +130,7 @@ fun PerfilScreen(navController: NavController){
         // Botón de cerrar sesión
         OutlinedButton(
             onClick = {
-                // Limpiar sesión
-                SessionManager.clearSession(context)
-                
-                // Navegar al login
+                viewModel.logout()
                 navController.navigate("login") {
                     popUpTo(0) { inclusive = true }
                 }

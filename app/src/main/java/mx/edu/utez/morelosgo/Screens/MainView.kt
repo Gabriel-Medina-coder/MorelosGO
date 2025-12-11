@@ -13,118 +13,24 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import mx.edu.utez.morelosgo.Screens.components.SitioList
-import mx.edu.utez.morelosgo.data.network.model.Favorito
-import mx.edu.utez.morelosgo.data.network.model.Sitio
-import mx.edu.utez.morelosgo.data.network.repository.FavoritoRepository
-import mx.edu.utez.morelosgo.data.network.repository.SitioRepository
-import mx.edu.utez.morelosgo.utils.SessionManager
+import mx.edu.utez.morelosgo.viewmodel.MainViewModel
 
 @Composable
 fun MainView(navController: NavController){
     val context = LocalContext.current
-    val sitioRepository = remember { SitioRepository(context) }
-    val favoritoRepository = remember { FavoritoRepository(context) }
+    val viewModel = remember { MainViewModel(context) }
     
-    var searchQuery by remember { mutableStateOf("") }
-    var sitios by remember { mutableStateOf<List<Sitio>>(emptyList()) }
-    var favoritos by remember { mutableStateOf<List<Favorito>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var selectedSitio by remember { mutableStateOf<Sitio?>(null) }
+    // Collect states from ViewModel
+    val sitios by viewModel.sitios.collectAsState()
+    val favoritos by viewModel.favoritos.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedSitio by viewModel.selectedSitio.collectAsState()
     
-    // Cargar sitios al iniciar
-    LaunchedEffect(Unit) {
-        isLoading = true
-        sitioRepository.getAll(
-            onSuccess = { listaSitios ->
-                sitios = listaSitios
-                isLoading = false
-            },
-            onError = { error ->
-                errorMessage = "Error al cargar sitios: $error"
-                isLoading = false
-            }
-        )
-    }
-    
-    // Cargar favoritos del usuario actual
-    LaunchedEffect(Unit) {
-        val currentUserId = SessionManager.getUserId(context)
-        if (currentUserId != 0) {
-            favoritoRepository.getAll(
-                onSuccess = { listaFavoritos ->
-                    favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                },
-                onError = { }
-            )
-        }
-    }
-    
-    // Función para verificar si un sitio es favorito
-    fun isFavorite(idSitio: Int): Boolean {
-        return favoritos.any { it.idSitio == idSitio }
-    }
-    
-    // Función para agregar/quitar favorito
-    fun toggleFavorite(sitio: Sitio) {
-        val esFavorito = isFavorite(sitio.idSitio)
-        val currentUserId = SessionManager.getUserId(context)
-        
-        if (currentUserId == 0) {
-            return
-        }
-        
-        if (esFavorito) {
-            // Remover favorito
-            val favorito = favoritos.find { it.idSitio == sitio.idSitio }
-            favorito?.let {
-                favoritoRepository.delete(
-                    idFavorito = it.idFavorito,
-                    onSuccess = {
-                        // Recargar favoritos
-                        favoritoRepository.getAll(
-                            onSuccess = { listaFavoritos ->
-                                favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                            },
-                            onError = { }
-                        )
-                    },
-                    onError = { }
-                )
-            }
-        } else {
-            // Agregar favorito
-            val nuevoFavorito = Favorito(
-                idFavorito = 0,
-                idUsuario = currentUserId,
-                idSitio = sitio.idSitio
-            )
-            favoritoRepository.create(
-                favorito = nuevoFavorito,
-                onSuccess = {
-                    // Recargar favoritos
-                    favoritoRepository.getAll(
-                        onSuccess = { listaFavoritos ->
-                            favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
-                        },
-                        onError = { }
-                    )
-                },
-                onError = { }
-            )
-        }
-    }
-    
-    // Filtrar sitios por búsqueda
+    // Get filtered sitios from ViewModel
     val filteredSitios = remember(searchQuery, sitios) {
-        if (searchQuery.isBlank()) {
-            sitios
-        } else {
-            sitios.filter { 
-                it.nombre.contains(searchQuery, ignoreCase = true) ||
-                it.tipo.contains(searchQuery, ignoreCase = true)
-            }
-        }
+        viewModel.getFilteredSitios()
     }
     
     Column(
@@ -135,7 +41,7 @@ fun MainView(navController: NavController){
         // Barra de búsqueda
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { searchQuery = it },
+            onValueChange = { viewModel.updateSearchQuery(it) },
             label = { Text("Buscar sitios") },
             trailingIcon = {
                 Icon(
@@ -161,9 +67,7 @@ fun MainView(navController: NavController){
             }
             errorMessage != null -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -175,31 +79,18 @@ fun MainView(navController: NavController){
             }
             filteredSitios.isEmpty() -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (searchQuery.isBlank()) 
-                            "No hay sitios disponibles" 
-                        else 
-                            "No se encontraron sitios",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("No se encontraron sitios")
                 }
             }
             else -> {
                 SitioList(
                     sitios = filteredSitios,
-                    isFavorite = { idSitio -> isFavorite(idSitio) },
-                    onDetails = { sitio ->
-                        selectedSitio = sitio
-                    },
-                    onFavoriteToggle = { sitio ->
-                        toggleFavorite(sitio)
-                    }
+                    isFavorite = { idSitio -> viewModel.isFavorite(idSitio) },
+                    onDetails = { sitio -> viewModel.selectSitio(sitio) },
+                    onFavoriteToggle = { sitio -> viewModel.toggleFavorite(sitio) }
                 )
             }
         }
@@ -208,7 +99,7 @@ fun MainView(navController: NavController){
     // Diálogo de detalles
     selectedSitio?.let { sitio ->
         AlertDialog(
-            onDismissRequest = { selectedSitio = null },
+            onDismissRequest = { viewModel.dismissDialog() },
             title = { Text(sitio.nombre) },
             text = {
                 Column {
@@ -220,7 +111,7 @@ fun MainView(navController: NavController){
                 }
             },
             confirmButton = {
-                TextButton(onClick = { selectedSitio = null }) {
+                TextButton(onClick = { viewModel.dismissDialog() }) {
                     Text("Cerrar")
                 }
             }
