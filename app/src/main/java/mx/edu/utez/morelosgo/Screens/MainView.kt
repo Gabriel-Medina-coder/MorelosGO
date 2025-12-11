@@ -8,10 +8,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import mx.edu.utez.volley4c.ui.components.SpinnerDropdown
 
 @Composable
 fun MainView(){
+
     Column {
         OutlinedTextField(
             value = "",
@@ -26,6 +29,9 @@ fun MainView(){
                 }
             }
         )
+
+        //Colocar SpinnerDropDown
+
     }
 }
 
