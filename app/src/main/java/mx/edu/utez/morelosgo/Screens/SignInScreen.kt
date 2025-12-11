@@ -1,0 +1,72 @@
+package mx.edu.utez.morelosgo.Screens
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import mx.edu.utez.morelosgo.R
+
+@Composable
+fun SignInScreen(){
+    Column() {
+        Image(
+            painter = painterResource(R.drawable.escudomorelos),
+            contentDescription = "Logo"
+        )
+        Text(text = "Registrate")
+        OutlinedTextField(
+            value = "",
+            onValueChange = {},
+            label = {
+                Icon(
+                    imageVector = Icons.Filled.AccountCircle,
+                    contentDescription = "User"
+                )
+                Text("Usuario")
+            }
+        )
+        OutlinedTextField(
+            value = "",
+            onValueChange = {},
+            label = {
+                Icon(
+                    imageVector = Icons.Filled.Email,
+                    contentDescription = "Email"
+                )
+                Text("Correo electrónico")
+            }
+        )
+        OutlinedTextField(
+            value = "",
+            onValueChange = {},
+            label = {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = "Password"
+                )
+                Text("Contraseña")
+            }
+        )
+        Text(text = "¿Ya tienes una cuenta? Inicia sesión")
+
+        Button(onClick = {}) {
+            Text(text = "Registrar")
+        }
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun SignInPreview(){
+    SignInScreen()
+}
