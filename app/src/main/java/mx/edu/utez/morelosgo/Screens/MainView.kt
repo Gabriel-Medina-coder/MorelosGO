@@ -12,18 +12,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import mx.edu.utez.morelosgo.Screens.components.SitioDetailDialog
 import mx.edu.utez.morelosgo.Screens.components.SitioList
+import mx.edu.utez.morelosgo.data.network.model.Favorito
 import mx.edu.utez.morelosgo.data.network.model.Sitio
+import mx.edu.utez.morelosgo.data.network.repository.FavoritoRepository
 import mx.edu.utez.morelosgo.data.network.repository.SitioRepository
+import mx.edu.utez.morelosgo.utils.SessionManager
 
 @Composable
 fun MainView(navController: NavController){
     val context = LocalContext.current
-    val repository = remember { SitioRepository(context) }
+    val sitioRepository = remember { SitioRepository(context) }
+    val favoritoRepository = remember { FavoritoRepository(context) }
     
     var searchQuery by remember { mutableStateOf("") }
     var sitios by remember { mutableStateOf<List<Sitio>>(emptyList()) }
+    var favoritos by remember { mutableStateOf<List<Favorito>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedSitio by remember { mutableStateOf<Sitio?>(null) }
@@ -31,7 +35,7 @@ fun MainView(navController: NavController){
     // Cargar sitios al iniciar
     LaunchedEffect(Unit) {
         isLoading = true
-        repository.getAll(
+        sitioRepository.getAll(
             onSuccess = { listaSitios ->
                 sitios = listaSitios
                 isLoading = false
@@ -41,6 +45,74 @@ fun MainView(navController: NavController){
                 isLoading = false
             }
         )
+    }
+    
+    // Cargar favoritos del usuario actual
+    LaunchedEffect(Unit) {
+        val currentUserId = SessionManager.getUserId(context)
+        if (currentUserId != 0) {
+            favoritoRepository.getAll(
+                onSuccess = { listaFavoritos ->
+                    favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                },
+                onError = { }
+            )
+        }
+    }
+    
+    // Función para verificar si un sitio es favorito
+    fun isFavorite(idSitio: Int): Boolean {
+        return favoritos.any { it.idSitio == idSitio }
+    }
+    
+    // Función para agregar/quitar favorito
+    fun toggleFavorite(sitio: Sitio) {
+        val esFavorito = isFavorite(sitio.idSitio)
+        val currentUserId = SessionManager.getUserId(context)
+        
+        if (currentUserId == 0) {
+            return
+        }
+        
+        if (esFavorito) {
+            // Remover favorito
+            val favorito = favoritos.find { it.idSitio == sitio.idSitio }
+            favorito?.let {
+                favoritoRepository.delete(
+                    idFavorito = it.idFavorito,
+                    onSuccess = {
+                        // Recargar favoritos
+                        favoritoRepository.getAll(
+                            onSuccess = { listaFavoritos ->
+                                favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                            },
+                            onError = { }
+                        )
+                    },
+                    onError = { }
+                )
+            }
+        } else {
+            // Agregar favorito
+            val nuevoFavorito = Favorito(
+                idFavorito = 0,
+                idUsuario = currentUserId,
+                idSitio = sitio.idSitio
+            )
+            favoritoRepository.create(
+                favorito = nuevoFavorito,
+                onSuccess = {
+                    // Recargar favoritos
+                    favoritoRepository.getAll(
+                        onSuccess = { listaFavoritos ->
+                            favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                        },
+                        onError = { }
+                    )
+                },
+                onError = { }
+            )
+        }
     }
     
     // Filtrar sitios por búsqueda
@@ -58,28 +130,26 @@ fun MainView(navController: NavController){
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 16.dp)
+            .padding(16.dp)
     ) {
         // Barra de búsqueda
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Text(text = "Buscar sitios") },
+            label = { Text("Buscar sitios") },
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "Search"
+                    contentDescription = "Buscar"
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Lista de sitios
+        // Lista de sitios o estados de carga/error
         when {
             isLoading -> {
                 Box(
@@ -97,7 +167,7 @@ fun MainView(navController: NavController){
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = errorMessage!!,
+                        text = errorMessage ?: "Error desconocido",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -123,19 +193,37 @@ fun MainView(navController: NavController){
             else -> {
                 SitioList(
                     sitios = filteredSitios,
+                    isFavorite = { idSitio -> isFavorite(idSitio) },
                     onDetails = { sitio ->
                         selectedSitio = sitio
+                    },
+                    onFavoriteToggle = { sitio ->
+                        toggleFavorite(sitio)
                     }
                 )
             }
         }
     }
     
-    // Dialog de detalles
+    // Diálogo de detalles
     selectedSitio?.let { sitio ->
-        SitioDetailDialog(
-            sitio = sitio,
-            onDismiss = { selectedSitio = null }
+        AlertDialog(
+            onDismissRequest = { selectedSitio = null },
+            title = { Text(sitio.nombre) },
+            text = {
+                Column {
+                    Text("Tipo: ${sitio.tipo}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Horarios: ${sitio.horarios}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Costo: ${sitio.costos}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedSitio = null }) {
+                    Text("Cerrar")
+                }
+            }
         )
     }
 }

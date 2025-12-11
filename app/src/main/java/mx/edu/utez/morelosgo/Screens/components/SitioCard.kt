@@ -3,7 +3,9 @@ package mx.edu.utez.morelosgo.Screens.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +19,9 @@ import mx.edu.utez.morelosgo.data.network.model.Sitio
 @Composable
 fun SitioCard(
     sitio: Sitio,
-    onDetails: (Sitio) -> Unit
+    isFavorite: Boolean,
+    onDetails: (Sitio) -> Unit,
+    onFavoriteToggle: (Sitio) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -67,13 +71,33 @@ fun SitioCard(
                 )
             }
             
-            IconButton(
-                onClick = { onDetails(sitio) }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = "Ver detalles"
-                )
+            Column {
+                // Botón de favorito
+                IconButton(
+                    onClick = { onFavoriteToggle(sitio) }
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) 
+                            Icons.Filled.Favorite 
+                        else 
+                            Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Favorito",
+                        tint = if (isFavorite) 
+                            MaterialTheme.colorScheme.error 
+                        else 
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                // Botón de detalles
+                IconButton(
+                    onClick = { onDetails(sitio) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = "Ver detalles"
+                    )
+                }
             }
         }
     }

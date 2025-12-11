@@ -254,41 +254,13 @@ fun MapView(navController: NavController) {
         
         // Diálogo para mostrar detalles del sitio seleccionado
         selectedSitio?.let { sitio ->
-            val esFavorito = isFavorite(sitio.idSitio)
-            
             AlertDialog(
                 onDismissRequest = { selectedSitio = null },
                 title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = sitio.nombre,
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f)
-                        )
-                        
-                        IconButton(
-                            onClick = {
-                                toggleFavorite(sitio)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (esFavorito) 
-                                    Icons.Filled.Favorite 
-                                else 
-                                    Icons.Outlined.FavoriteBorder,
-                                contentDescription = "Favorito",
-                                tint = if (esFavorito) 
-                                    MaterialTheme.colorScheme.error 
-                                else 
-                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
+                    Text(
+                        text = sitio.nombre,
+                        style = MaterialTheme.typography.titleLarge
+                    )
                 },
                 text = {
                     Column {
