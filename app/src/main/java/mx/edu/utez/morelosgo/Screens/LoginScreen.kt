@@ -2,6 +2,7 @@ package mx.edu.utez.morelosgo.Screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Lock
@@ -26,22 +27,26 @@ fun LoginScreen() {
             value = "",
             onValueChange = {},
             label = {
-                Icon(
-                    imageVector = Icons.Filled.AccountCircle,
-                    contentDescription = "User"
-                )
-                Text("Usuario")
+                Row {
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = "User"
+                    )
+                    Text("Usuario")
+                }
             }
         )
         OutlinedTextField(
             value = "",
             onValueChange = {},
             label = {
-                Icon(
-                    imageVector = Icons.Filled.Lock,
-                    contentDescription = "Password"
-                )
-                Text("Contraseña")
+                Row {
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "Password"
+                    )
+                    Text("Contraseña")
+                }
             }
         )
         Text(text = "¿No tienes una cuenta? Registrate")
