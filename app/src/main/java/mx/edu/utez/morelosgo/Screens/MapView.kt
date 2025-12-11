@@ -55,14 +55,18 @@ fun MapView(navController: NavController) {
         )
     }
     
-    // Cargar favoritos
+    // Cargar favoritos del usuario actual
     LaunchedEffect(Unit) {
-        favoritoRepository.getAll(
-            onSuccess = { listaFavoritos ->
-                favoritos = listaFavoritos
-            },
-            onError = { }
-        )
+        val currentUserId = SessionManager.getUserId(context)
+        if (currentUserId != 0) {
+            favoritoRepository.getAll(
+                onSuccess = { listaFavoritos ->
+                    // Filtrar solo favoritos del usuario actual
+                    favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                },
+                onError = { }
+            )
+        }
     }
     
     // Permisos de ubicación
@@ -124,9 +128,11 @@ fun MapView(navController: NavController) {
                 favoritoRepository.delete(
                     idFavorito = it.idFavorito,
                     onSuccess = {
-                        // Recargar favoritos
+                        // Recargar favoritos del usuario actual
                         favoritoRepository.getAll(
-                            onSuccess = { favoritos = it },
+                            onSuccess = { listaFavoritos ->
+                                favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                            },
                             onError = { }
                         )
                     },
@@ -143,9 +149,11 @@ fun MapView(navController: NavController) {
             favoritoRepository.create(
                 favorito = nuevoFavorito,
                 onSuccess = {
-                    // Recargar favoritos
+                    // Recargar favoritos del usuario actual
                     favoritoRepository.getAll(
-                        onSuccess = { favoritos = it },
+                        onSuccess = { listaFavoritos ->
+                            favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                        },
                         onError = { }
                     )
                 },
