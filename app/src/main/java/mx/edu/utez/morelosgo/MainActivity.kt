@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+import mx.edu.utez.morelosgo.Screens.LoginScreen
+import mx.edu.utez.morelosgo.Screens.MainScreen
 import mx.edu.utez.morelosgo.ui.theme.MorelosGoTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,6 +22,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MorelosGoTheme {
+                MainScreen(navController)
 
             }
         }
