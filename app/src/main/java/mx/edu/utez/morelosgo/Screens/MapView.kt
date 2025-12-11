@@ -39,6 +39,7 @@ fun MapView(navController: NavController) {
     var sitios by remember { mutableStateOf<List<Sitio>>(emptyList()) }
     var favoritos by remember { mutableStateOf<List<Favorito>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var selectedSitio by remember { mutableStateOf<Sitio?>(null) }
     
     // Cargar sitios
     LaunchedEffect(Unit) {
@@ -214,78 +215,83 @@ fun MapView(navController: NavController) {
                 filteredSitios.forEach { sitio ->
                     val position = LatLng(sitio.latitud, sitio.longitud)
                     val markerColor = getMarkerColor(sitio.tipo)
-                    val esFavorito = isFavorite(sitio.idSitio)
                     
-                    MarkerInfoWindowContent(
+                    Marker(
                         state = rememberMarkerState(position = position),
                         title = sitio.nombre,
                         snippet = sitio.tipo,
-                        icon = BitmapDescriptorFactory.defaultMarker(markerColor)
-                    ) { marker ->
-                        // Info Window personalizado con botón de favorito
-                        Card(
-                            modifier = Modifier.padding(8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp)
-                            ) {
-                                // Header con nombre y botón favorito
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = sitio.nombre,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    
-                                    IconButton(
-                                        onClick = { toggleFavorite(sitio) },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (esFavorito) 
-                                                Icons.Filled.Favorite 
-                                            else 
-                                                Icons.Outlined.FavoriteBorder,
-                                            contentDescription = "Favorito",
-                                            tint = if (esFavorito) 
-                                                MaterialTheme.colorScheme.error 
-                                            else 
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                
-                                Spacer(modifier = Modifier.height(4.dp))
-                                
-                                Text(
-                                    text = "Tipo: ${sitio.tipo}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Horarios: ${sitio.horarios}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Costo: ${sitio.costos}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        icon = BitmapDescriptorFactory.defaultMarker(markerColor),
+                        onClick = {
+                            selectedSitio = sitio
+                            true
                         }
-                    }
+                    )
                 }
             }
+        }
+        
+        // Diálogo para mostrar detalles del sitio seleccionado
+        selectedSitio?.let { sitio ->
+            val esFavorito = isFavorite(sitio.idSitio)
+            
+            AlertDialog(
+                onDismissRequest = { selectedSitio = null },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = sitio.nombre,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        IconButton(
+                            onClick = {
+                                toggleFavorite(sitio)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (esFavorito) 
+                                    Icons.Filled.Favorite 
+                                else 
+                                    Icons.Outlined.FavoriteBorder,
+                                contentDescription = "Favorito",
+                                tint = if (esFavorito) 
+                                    MaterialTheme.colorScheme.error 
+                                else 
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "Tipo: ${sitio.tipo}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Horarios: ${sitio.horarios}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Costo: ${sitio.costos}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { selectedSitio = null }) {
+                        Text("Cerrar")
+                    }
+                }
+            )
         }
     }
 }
