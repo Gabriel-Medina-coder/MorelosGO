@@ -10,13 +10,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import mx.edu.utez.morelosgo.R
 
 @Composable
-fun PerfilScreen(navController: NavController){
-    Column {
+fun PerfilScreen(){
+    Column() {
         Image(
             painter = painterResource(R.drawable.escudomorelos),
             contentDescription = "Logo"
@@ -49,5 +47,5 @@ fun PerfilScreen(navController: NavController){
 @Composable
 @Preview(showBackground = true)
 fun PerfilPreview(){
-    PerfilScreen(navController = rememberNavController())
+    PerfilScreen()
 }

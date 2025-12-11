@@ -1,7 +1,6 @@
 package mx.edu.utez.morelosgo.Screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
@@ -13,15 +12,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import mx.edu.utez.morelosgo.R
 
 @Composable
-fun SignInScreen(navController: NavController){
+fun SignInScreen(){
     Column() {
         Image(
             painter = painterResource(R.drawable.escudomorelos),
@@ -67,29 +63,16 @@ fun SignInScreen(navController: NavController){
                 }
             }
         )
-        Text(
-            text = "¿Ya tienes una cuenta? Inicia sesión",
-            modifier = Modifier.clickable {
-                // Navegar a la ruta "login"
-                navController.navigate("login")
-            }
-        )
+        Text(text = "¿Ya tienes una cuenta? Inicia sesión")
 
-        Button(onClick = {
-            // **IMPORTANTE: Aquí va la lógica de registro.**
-            // Asumimos éxito y volvemos a la pantalla de Login.
-            navController.navigate("login") {
-                // Borra la pantalla de registro de la pila
-                popUpTo("signin") { inclusive = true }
-            }
-        }) {
+        Button(onClick = {}) {
             Text(text = "Registrar")
         }
     }
-    }
+}
 
 @Composable
 @Preview(showBackground = true)
 fun SignInPreview(){
-    SignInScreen(navController = rememberNavController())
+    SignInScreen()
 }
