@@ -1,8 +1,6 @@
 package mx.edu.utez.morelosgo.Screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -14,8 +12,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import mx.edu.utez.morelosgo.Screens.components.SitioCard
 import mx.edu.utez.morelosgo.Screens.components.SitioDetailDialog
+import mx.edu.utez.morelosgo.Screens.components.SitioList
 import mx.edu.utez.morelosgo.data.network.model.Sitio
 import mx.edu.utez.morelosgo.data.network.repository.SitioRepository
 
@@ -123,21 +121,12 @@ fun MainView(navController: NavController){
                 }
             }
             else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(filteredSitios) { sitio ->
-                        SitioCard(
-                            sitio = sitio,
-                            onInfoClick = { selectedSitio = sitio }
-                        )
+                SitioList(
+                    sitios = filteredSitios,
+                    onDetails = { sitio ->
+                        selectedSitio = sitio
                     }
-                    
-                    // Espacio al final
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
+                )
             }
         }
     }

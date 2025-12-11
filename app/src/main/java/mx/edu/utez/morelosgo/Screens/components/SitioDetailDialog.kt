@@ -1,5 +1,6 @@
 package mx.edu.utez.morelosgo.Screens.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,11 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
 import mx.edu.utez.morelosgo.data.network.model.Sitio
 
 @Composable
@@ -35,45 +37,28 @@ fun SitioDetailDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.9f),
+                .fillMaxHeight(0.85f),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             )
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Imagen del sitio
+                // Encabezado con botón de cerrar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(250.dp)
+                        .padding(8.dp)
                 ) {
-                    AsyncImage(
-                        model = sitio.fotografia,
-                        contentDescription = sitio.nombre,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    // Botón de cerrar
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp),
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                        )
+                        modifier = Modifier.align(Alignment.TopEnd)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Cerrar",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            contentDescription = "Cerrar"
                         )
                     }
                 }
@@ -83,7 +68,7 @@ fun SitioDetailDialog(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(20.dp)
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     // Título
                     Text(
@@ -125,27 +110,28 @@ fun SitioDetailDialog(
                         content = sitio.costos
                     )
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Ubicación
-                    DetailSection(
-                        icon = Icons.Filled.LocationOn,
-                        title = "Ubicación",
-                        content = "Lat: ${sitio.latitud}, Lng: ${sitio.longitud}"
-                    )
-                    
                     // Reseñas (si existen)
                     if (!sitio.resenas.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         DetailSection(
                             icon = Icons.Filled.RateReview,
-                            title = "Reseñas",
+                            title = "Reseñas y Comentarios",
                             content = sitio.resenas
                         )
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Botón de cerrar al final
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Cerrar")
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
