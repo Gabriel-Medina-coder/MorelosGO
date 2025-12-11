@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import mx.edu.utez.morelosgo.R
 import mx.edu.utez.morelosgo.data.network.model.Usuario
 import mx.edu.utez.morelosgo.data.network.repository.UsuarioRepository
+import mx.edu.utez.morelosgo.utils.SessionManager
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -132,7 +133,10 @@ fun LoginScreen(navController: NavController) {
                 
                 repository.login(
                     usuario = usuario,
-                    onSuccess = { user ->
+                    onSuccess = { usuario ->
+                        // Guardar sesión del usuario
+                        SessionManager.saveUserSession(context, usuario)
+                        
                         isLoading = false
                         navController.navigate("main") {
                             popUpTo("login") { inclusive = true }

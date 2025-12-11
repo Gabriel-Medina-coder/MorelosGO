@@ -6,11 +6,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -21,25 +22,28 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import mx.edu.utez.morelosgo.data.network.model.Favorito
 import mx.edu.utez.morelosgo.data.network.model.Sitio
+import mx.edu.utez.morelosgo.data.network.repository.FavoritoRepository
 import mx.edu.utez.morelosgo.data.network.repository.SitioRepository
+import mx.edu.utez.morelosgo.utils.SessionManager
 
 @Composable
 fun MapView(navController: NavController) {
     val context = LocalContext.current
-    val repository = remember { SitioRepository(context) }
+    val sitioRepository = remember { SitioRepository(context) }
+    val favoritoRepository = remember { FavoritoRepository(context) }
     
-    var selectedFilter by remember { mutableStateOf("Todos") }
+    var selectedFilter by remember { mutableStateOf("General") }
     var permitido by remember { mutableStateOf(false) }
     var sitios by remember { mutableStateOf<List<Sitio>>(emptyList()) }
+    var favoritos by remember { mutableStateOf<List<Favorito>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedSitio by remember { mutableStateOf<Sitio?>(null) }
     
     // Cargar sitios
     LaunchedEffect(Unit) {
         isLoading = true
-        repository.getAll(
+        sitioRepository.getAll(
             onSuccess = { listaSitios ->
                 sitios = listaSitios
                 isLoading = false
@@ -47,6 +51,16 @@ fun MapView(navController: NavController) {
             onError = {
                 isLoading = false
             }
+        )
+    }
+    
+    // Cargar favoritos
+    LaunchedEffect(Unit) {
+        favoritoRepository.getAll(
+            onSuccess = { listaFavoritos ->
+                favoritos = listaFavoritos
+            },
+            onError = { }
         )
     }
     
@@ -76,22 +90,67 @@ fun MapView(navController: NavController) {
         position = CameraPosition.fromLatLngZoom(morelasCenter, 10f)
     }
     
-    // Filtrar sitios según filtro y búsqueda
-    val filteredSitios = remember(selectedFilter, sitios, searchQuery) {
-        var filtered = when (selectedFilter) {
-            "General" -> sitios.filter { it.tipo.contains("General", ignoreCase = true) }
-            "Popular" -> sitios.filter { it.tipo.contains("Popular", ignoreCase = true) }
-            else -> sitios
-        }
-        
-        if (searchQuery.isNotBlank()) {
-            filtered = filtered.filter { 
-                it.nombre.contains(searchQuery, ignoreCase = true) ||
-                it.tipo.contains(searchQuery, ignoreCase = true)
+    // Filtrar sitios según filtro
+    val filteredSitios = remember(selectedFilter, sitios, favoritos) {
+        when (selectedFilter) {
+            "Favoritos" -> {
+                val favoritoIds = favoritos.map { it.idSitio }.toSet()
+                sitios.filter { it.idSitio in favoritoIds }
             }
+            else -> sitios // "General" muestra todos
+        }
+    }
+    
+    // Función para verificar si un sitio es favorito
+    fun isFavorite(idSitio: Int): Boolean {
+        return favoritos.any { it.idSitio == idSitio }
+    }
+    
+    // Función para agregar/quitar favorito
+    fun toggleFavorite(sitio: Sitio) {
+        val esFavorito = isFavorite(sitio.idSitio)
+        val currentUserId = SessionManager.getUserId(context)
+        
+        if (currentUserId == 0) {
+            // No hay usuario logueado
+            return
         }
         
-        filtered
+        if (esFavorito) {
+            // Remover favorito
+            val favorito = favoritos.find { it.idSitio == sitio.idSitio }
+            favorito?.let {
+                favoritoRepository.delete(
+                    idFavorito = it.idFavorito,
+                    onSuccess = {
+                        // Recargar favoritos
+                        favoritoRepository.getAll(
+                            onSuccess = { favoritos = it },
+                            onError = { }
+                        )
+                    },
+                    onError = { }
+                )
+            }
+        } else {
+            // Agregar favorito con ID del usuario actual
+            val nuevoFavorito = Favorito(
+                idFavorito = 0, // Se genera en el servidor
+                idUsuario = currentUserId,
+                idSitio = sitio.idSitio
+            )
+            favoritoRepository.create(
+                favorito = nuevoFavorito,
+                onSuccess = {
+                    // Recargar favoritos
+                    favoritoRepository.getAll(
+                        onSuccess = { favoritos = it },
+                        onError = { }
+                    )
+                },
+                onError = { }
+            )
+        }
     }
     
     // Función para obtener color del marcador según tipo
@@ -111,26 +170,7 @@ fun MapView(navController: NavController) {
             .fillMaxSize()
             .padding(top = 16.dp)
     ) {
-        // Barra de búsqueda
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Buscar sitios") },
-            trailingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = "Buscar"
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            singleLine = true
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Botones de filtro
+        // Botones de filtro: General y Favoritos
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -138,19 +178,14 @@ fun MapView(navController: NavController) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FilterButton(
-                text = "Todos",
-                isSelected = selectedFilter == "Todos",
-                onClick = { selectedFilter = "Todos" }
-            )
-            FilterButton(
                 text = "General",
                 isSelected = selectedFilter == "General",
                 onClick = { selectedFilter = "General" }
             )
             FilterButton(
-                text = "Popular",
-                isSelected = selectedFilter == "Popular",
-                onClick = { selectedFilter = "Popular" }
+                text = "Favoritos",
+                isSelected = selectedFilter == "Favoritos",
+                onClick = { selectedFilter = "Favoritos" }
             )
         }
         
@@ -160,7 +195,7 @@ fun MapView(navController: NavController) {
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.Center
+                contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
@@ -179,18 +214,15 @@ fun MapView(navController: NavController) {
                 filteredSitios.forEach { sitio ->
                     val position = LatLng(sitio.latitud, sitio.longitud)
                     val markerColor = getMarkerColor(sitio.tipo)
+                    val esFavorito = isFavorite(sitio.idSitio)
                     
                     MarkerInfoWindowContent(
                         state = rememberMarkerState(position = position),
                         title = sitio.nombre,
                         snippet = sitio.tipo,
-                        icon = BitmapDescriptorFactory.defaultMarker(markerColor),
-                        onClick = {
-                            selectedSitio = sitio
-                            true
-                        }
+                        icon = BitmapDescriptorFactory.defaultMarker(markerColor)
                     ) { marker ->
-                        // Info Window personalizado
+                        // Info Window personalizado con botón de favorito
                         Card(
                             modifier = Modifier.padding(8.dp),
                             colors = CardDefaults.cardColors(
@@ -201,12 +233,39 @@ fun MapView(navController: NavController) {
                             Column(
                                 modifier = Modifier.padding(12.dp)
                             ) {
-                                Text(
-                                    text = sitio.nombre,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                // Header con nombre y botón favorito
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = sitio.nombre,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    
+                                    IconButton(
+                                        onClick = { toggleFavorite(sitio) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (esFavorito) 
+                                                Icons.Filled.Favorite 
+                                            else 
+                                                Icons.Outlined.FavoriteBorder,
+                                            contentDescription = "Favorito",
+                                            tint = if (esFavorito) 
+                                                MaterialTheme.colorScheme.error 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                
                                 Spacer(modifier = Modifier.height(4.dp))
+                                
                                 Text(
                                     text = "Tipo: ${sitio.tipo}",
                                     style = MaterialTheme.typography.bodySmall,
@@ -244,7 +303,8 @@ private fun FilterButton(
                 MaterialTheme.colorScheme.primary 
             else 
                 MaterialTheme.colorScheme.surfaceVariant
-        )
+        ),
+        modifier = Modifier.width(150.dp)
     ) {
         Text(text = text)
     }
