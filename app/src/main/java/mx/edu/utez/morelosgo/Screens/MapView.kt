@@ -116,27 +116,36 @@ fun MapView(navController: NavController) {
         val esFavorito = isFavorite(sitio.idSitio)
         val currentUserId = SessionManager.getUserId(context)
         
+        // Debug logging
+        android.util.Log.d("MapView", "toggleFavorite - Sitio: ${sitio.nombre}, ID: ${sitio.idSitio}, esFavorito: $esFavorito")
+        
         if (currentUserId == 0) {
             // No hay usuario logueado
+            android.util.Log.d("MapView", "toggleFavorite - No hay usuario logueado")
             return
         }
         
         if (esFavorito) {
             // Remover favorito
             val favorito = favoritos.find { it.idSitio == sitio.idSitio }
+            android.util.Log.d("MapView", "Removiendo favorito - idFavorito: ${favorito?.idFavorito}, idSitio: ${favorito?.idSitio}")
             favorito?.let {
                 favoritoRepository.delete(
                     idFavorito = it.idFavorito,
                     onSuccess = {
+                        android.util.Log.d("MapView", "Favorito eliminado exitosamente")
                         // Recargar favoritos del usuario actual
                         favoritoRepository.getAll(
                             onSuccess = { listaFavoritos ->
                                 favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                                android.util.Log.d("MapView", "Favoritos después de eliminar: ${favoritos.map { it.idSitio }}")
                             },
                             onError = { }
                         )
                     },
-                    onError = { }
+                    onError = { error ->
+                        android.util.Log.e("MapView", "Error al eliminar favorito: $error")
+                    }
                 )
             }
         } else {
@@ -146,18 +155,23 @@ fun MapView(navController: NavController) {
                 idUsuario = currentUserId,
                 idSitio = sitio.idSitio
             )
+            android.util.Log.d("MapView", "Agregando favorito - Usuario: $currentUserId, Sitio: ${sitio.idSitio} (${sitio.nombre})")
             favoritoRepository.create(
                 favorito = nuevoFavorito,
                 onSuccess = {
+                    android.util.Log.d("MapView", "Favorito agregado exitosamente")
                     // Recargar favoritos del usuario actual
                     favoritoRepository.getAll(
                         onSuccess = { listaFavoritos ->
                             favoritos = listaFavoritos.filter { it.idUsuario == currentUserId }
+                            android.util.Log.d("MapView", "Favoritos después de agregar: ${favoritos.map { it.idSitio }}")
                         },
                         onError = { }
                     )
                 },
-                onError = { }
+                onError = { error ->
+                    android.util.Log.e("MapView", "Error al agregar favorito: $error")
+                }
             )
         }
     }
